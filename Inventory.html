@@ -1,0 +1,329 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Supply Chain Management</title>
+    <link rel="stylesheet" href="{% static 'css/inventory.css' %}" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Boxicons CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- INCLUDING JQUERY-->
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body id="body-pd">
+    <script src="inventory.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!-- Bootstrap Bundle (Bootstrap JS + Popper.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <header class="header" id="header">
+      <div class="header_toggle">
+        <div
+          style="display: flex; align-items: baseline; gap: 10px"
+          class="header_toggle"
+        >
+          <i class="bx bx-menu" id="header-toggle"></i>
+          <h2 style="color: #6e48c0; font-weight: 600; margin-left: 0px">
+            Inventory
+          </h2>
+        </div>
+        <h6 style="margin-left: 17%">In-house Insights</h6>
+      </div>
+      <div class="header_img">
+        <!-- <img src="https://i.imgur.com/hczKIze.jpg" alt="" /> -->
+      </div>
+    </header>
+
+    <!-- sidebar start -->
+    <div class="l-navbar" id="nav-bar">
+      <nav class="nav">
+        <div>
+          <a href="#" class="nav_logo">
+            <i class="bx bx-layer nav_logo-icon"></i>
+            <span class="nav_logo-name">Supply Chain</span>
+          </a>
+          <div class="nav_list">
+            <a href="{% url 'dashboard' %}" class="nav_link">
+              <i class="bx bx-grid-alt nav_icon"></i>
+              <span class="nav_name">Dashboard</span>
+            </a>
+            <a href="{% url 'sales' %}" class="nav_link">
+              <i class="bx bx-user nav_icon"></i>
+              <span class="nav_name">Sales</span>
+            </a>
+            <a href="{% url 'inventory' %}" class="nav_link active">
+              <i class="bx bx-message-square-detail nav_icon"></i>
+              <span class="nav_name">Inventory</span>
+            </a>
+            <a href="{% url 'setting' %}" class="nav_link">
+              <i class="bx bx-bookmark nav_icon"></i>
+              <span class="nav_name">Setting</span>
+            </a>
+          </div>
+        </div>
+        <!-- <a href="#" class="nav_link">
+          <i class="bx bx-log-out nav_icon"></i>
+          <span class="nav_name">SignOut</span>
+        </a> -->
+      </nav>
+    </div>
+    <!-- sidebar end -->
+
+    <div class="text-alert">
+      <div class="inv-table" style="margin-top: 100px">
+        <div class="sort">
+          <div>
+            <label id="store-name">Enter Store Number:</label>
+            <input
+              type="number"
+              id="storeInput"
+              placeholder="Enter Store ID.."
+              value="1"
+              onkeyup="searchTable() "
+            />
+          </div>
+          <div class="dropdown">
+            <span id="columns">Choose Columns &#9660;</span>
+            <div class="dropdown-content" id="dropdownContent">
+              <!-- Checkboxes will be dynamically added here -->
+            </div>
+          </div>
+        </div>
+        <br />
+        <div id="tableContainer">
+          <table id="tableContainer2">
+            <tr>
+              <th>Store</th>
+              <th>Brand</th>
+              <th>Description</th>
+              <th>Total Sales</th>
+              <th>Sales_Per_Day</th>
+              <th>Avg_Lead_Time</th>
+              <th>Optimal_Stock_Level</th>
+              <th>Max_Daily_Sales</th>
+              <th>Safety_Stock</th>
+              <th>Recommended_Stock_Level</th>
+              <th>InventoryId</th>
+              <th>onHand</th>
+              <th>LeadTime</th>
+              <th>Start_Date</th>
+              <th>End_Date</th>
+              <th>Total_Days</th>
+              <th>Safety_Status</th>
+              <th>Stock_Level_Difference</th>
+              <!-- Add more headers as needed -->
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="graph">
+        <label id="store-name">Enter Brand Number:</label>
+        <input
+        type="text"
+        id="brandSelect"
+        placeholder="Enter Brand.."
+        value="58"
+        onkeyup="updatePieChart()"
+    />
+        <canvas id="pieChart" width="400" height="400"></canvas>
+      </div>
+
+      <!-- JavaScript -->
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+      <script>
+        
+        var inventoryData = JSON.parse('{{ inventory_data | escapejs }}');
+        var pieChart; // Global variable to hold the chart instance
+
+        function updatePieChart() {
+            // Get the brand ID from the input field
+            var brandId = document.getElementById('brandSelect').value;
+
+            // Filter inventory data for the selected brand
+            var brandData = inventoryData.filter(item => item.Brand == brandId);
+
+            // Extract unique store IDs and their corresponding onHand values
+            var stores = [...new Set(brandData.map(item => item.Store))];
+            var onHandValuesByStore = stores.map(store =>
+                brandData.filter(item => item.Store === store)
+                         .reduce((total, item) => total + item.onHand, 0)
+            );
+
+            // Get the context for the pie chart
+            var ctx = document.getElementById('pieChart').getContext('2d');
+
+            // Destroy any existing chart instance to avoid creating multiple charts
+            if (pieChart) {
+                pieChart.destroy();
+            }
+
+            // Create the pie chart
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    
+                    datasets: [{
+                        label: 'On Hand',
+                        data: onHandValuesByStore,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(201, 203, 207, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(201, 203, 207, 1)'
+                        ],
+                        borderWidth: 1
+                    }],
+                    labels: stores
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    tooltips: {
+                      callbacks: {
+                        label: function(tooltipItem, data) {
+                          var storeId = data.labels[tooltipItem.index];
+                          var onHand = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+                          return `Store ${storeId}: ${onHand} On Hand`;
+                        }
+                      }
+                  }
+                }
+            });
+        }
+
+        // Initial chart rendering
+        updatePieChart();
+        
+      </script>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            processData(this.responseText);
+            populateDropdown(this.responseText);
+          }
+        };
+        xhttp.open("GET", "{% static 'data/safetystock.csv' %}", true);
+        {% comment %} xhttp.open("GET", "{% static 'data/3.csv' %}", true); {% endcomment %}
+
+        xhttp.send();
+
+        function processData(csvData) {
+          var lines = csvData.split("\n");
+          var table = document.getElementById("tableContainer2");
+          var seenBrands = new Set();
+
+          for (var i = 1; i < lines.length; i++) {
+            var row = lines[i].split(",");
+            var brand = row[1]; // Assuming the brand is in the second column (index 1)
+
+            if (!seenBrands.has(brand)) {
+              seenBrands.add(brand);
+              var newRow = table.insertRow(-1);
+              for (var j = 0; j < row.length; j++) {
+                var cell = newRow.insertCell(j);
+                cell.innerHTML = row[j];
+              }
+            }
+          }
+          searchTable(); // Initially display data for store 1
+        }
+      });
+
+      function searchTable() {
+        updatePieChart();
+        var storeInput, filter, table, tr, td, i, txtValue;
+        storeInput = document.getElementById("storeInput");
+        filter = storeInput.value.trim().toUpperCase();
+        table = document.getElementById("tableContainer2");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 1; i < tr.length; i++) {
+          // Start from 1 to skip header row
+          td = tr[i].getElementsByTagName("td")[0]; // Get the store ID cell
+          if (td) {
+            txtValue = td.textContent || td.innerText;
+            if (filter === "") {
+              tr[i].style.display = ""; // Display all rows if input is empty
+            } else {
+              // Check if txtValue matches filter exactly when the input is not empty
+              if (txtValue.toUpperCase() === filter) {
+                tr[i].style.display = "";
+              } else {
+                tr[i].style.display = "none";
+              }
+            }
+          }
+        }
+
+      }
+      function populateDropdown(csvData) {
+        var dropdownContent = document.getElementById("dropdownContent");
+        var columnNames = csvData.split("\n")[0].split(","); // Extract column names from the first row of CSV data
+        columnNames.forEach(function (columnName) {
+          var label = document.createElement("label");
+          var checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "column-checkbox";
+          checkbox.dataset.column = columnName.trim(); // Trim column name to remove any leading/trailing spaces
+          checkbox.checked = true; // By default, all columns are checked
+          checkbox.addEventListener("change", toggleColumnVisibility); // Add event listener to toggle column visibility
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(" " + columnName.trim())); // Display column name in the dropdown
+          dropdownContent.appendChild(label);
+        });
+      }
+
+      function toggleColumnVisibility() {
+        var column = this.dataset.column;
+        var columnIndex = Array.from(
+          this.closest("label").parentNode.children
+        ).indexOf(this.closest("label")); // Get index of checkbox's parent label
+        var table = document.getElementById("tableContainer2");
+        var rows = table.rows;
+
+        if (this.checked) {
+          // Show the column
+          for (var i = 0; i < rows.length; i++) {
+            rows[i].cells[columnIndex].style.display = "";
+          }
+        } else {
+          // Hide the column
+          for (var i = 0; i < rows.length; i++) {
+            rows[i].cells[columnIndex].style.display = "none";
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
